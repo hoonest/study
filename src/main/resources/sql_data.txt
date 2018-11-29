@@ -59,3 +59,36 @@
     ---- . DDL 자동 트랜젝션이 적용(commit).
     ---- . DML : 정상적으로 종료되었다면 자동으로 commit.
     ---- . 정전이 발생하거나 컴퓨터가 다운시 자동으로 rollback.
+
+
+
+
+-- * 오라클  : 데이터 무결성 제약 조건
+
+--   1) 데이터 무결성 제약 조건(Data Integrity Constraint Rule)
+--        :  테이블에 부적절한 자료(데이터)가 입력되는 것을 방지하기 위해서 테이블을 생성할 때
+--           각 컬럼에 대해서 정의하는 여러가지 규칙을 의미.
+
+--   2) 종류
+---         . Not null/null : null을 허용할 지 아니면 반드시 데이터를 입력받게 할 건지의 조건.
+---         . Unique : 지정된 컬럼에 중복되지 않고 유일한 값만 저장되는 조건.
+---         . Primary key(기본키) : unique + not null
+---         . Check : 특정한 값만 저장되는 필드 조건.
+---         . Default : 기본값으로 특정 값이 저장되도록 설정하는 조건.
+---         . Foreign key(외래키) : 다른 테이블의 컬럼에 들어있는 값만 저장을 허용하는 조건.
+
+-- * USER_CONSTRAINTS 데이터 딕셔너리 뷰
+--            : 제약 조건에 관한 정보를 알려 줌.
+
+SQL>desc USER_CONSTRAINTS; -- [command] 창에서 확인할 것.
+--       - owner : 제약 조건을 소유한 사용자명을 저장하는 컬럼.
+--       - constraint_name : 제약 조건명을 저장하는 컬럼.
+--       - constraint_type : 제약 조건 유형을 저장하는 컬럼.
+--           . P : primary key
+--           . R : foreign key
+--           . U : unique
+--           . C : check, not null
+--       - table_name : 각 제약 조건들이 속한 테이블의 이름.
+--       - search_condition : 어떤 내용이 조건으로 사용되었는지 설명.
+--       - r_constraint_name : 제약 조건이 foreingkey인 경우
+--                          어떤 primary key를 참조했는지를 대한 정보를 가짐.
