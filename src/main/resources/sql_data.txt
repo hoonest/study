@@ -92,3 +92,326 @@ SQL>desc USER_CONSTRAINTS; -- [command] 창에서 확인할 것.
 --       - search_condition : 어떤 내용이 조건으로 사용되었는지 설명.
 --       - r_constraint_name : 제약 조건이 foreingkey인 경우
 --                          어떤 primary key를 참조했는지를 대한 정보를 가짐.
+
+
+
+
+
+create table emp07(
+empno   number(4) constraint emp07_empno_pk primary key,
+ename   varchar2(20)constraint emp07_ename_nn not null,
+sal     number(7,2) constraint emp07_sal_ck check(sal between 500 and 5000),
+gender  varchar2(1) constraint emp07_gender_ck check(gender in ('M','F'))
+);
+
+insert into emp07 values(1234, '홍길동', 6000, 'F'); --error
+insert into emp07 values(1234, '홍길동', 4000, 'N'); --error
+
+
+create table dept08(
+deptno   number(4) constraint dept08_deptno_pk primary key,
+dname   varchar2(20) constraint dept08_dname_nn not null,
+loc     varchar2(20) default 'SEOUL'
+);
+
+insert into dept08 (deptno, dname) values (1234, 'ACCOUNTING')
+
+
+
+create table emp08(
+empno   number(4)  constraint emp08_empno_pk primary key,
+ename   varchar2(20) not null,
+job     varchar2(20),
+deptno  number(2) constraint emp08_deptno_fk references dept06(deptno)
+);
+
+create table emp09(
+empno   number(4) ,
+ename   varchar2(20) not null,
+job     varchar2(20),
+deptno  number(2),
+constraint emp09_empno_pk primary key(empno),
+constraint emp09_deptno_fk references dept06(deptno)
+);
+
+create table emp09(
+empno   number(4) ,
+ename   varchar2(20),
+job     varchar2(20),
+deptno  number(2)
+);
+alter table emp10
+add constraint emp10_empno_pk primary key(empno);
+
+alter table emp10
+add constraint emp10_empno_pk
+foreign key(deptno) references dept08(deptno);
+
+alter table emp10
+modify ename constraint emp10_ename_nn not null;
+
+alter table emp10
+drop primary key;
+
+
+
+alter table emp06
+disable constraint emp06_depno_fk;
+
+
+alter table emp06
+enable constraint emp06_depno_fk;
+
+
+column r_constraint_name format a10;
+
+-- * 오라클 - 뷰(View)
+--     - 물리적인 테이블에 근거한 논리적인 가상 테이블.
+--     - 가상이란 단어는 실질적으로 데이터를 저장하고 있지 않기 때문에 붙인 것이고,
+--       테이블이란 단어는 실질적으로 데이터를 저장하고 있지 않더라도 사용 계정자는 마치
+--       테이블을 사용하는 것과 동일하게 뷰를 사용할 수 있기 때문에 붙인 것.
+--     - 뷰는 기본테이블에서 파생된 객체로서 기본테이블에 대한 하나의 쿼리문임.
+--     - 실제 테이블에 저장된 데이터를 뷰를 통해서 볼 수 있도록 함.
+--     - 사용자에게 주어진 뷰를 통해서 기본 테이블을 제한적으로 사용하게 됨.
+--     - 뷰는 이미 존재하고 있는 테이블에 제한적으로 접근하도록 한다.
+--     - 뷰를 생성하기 위해서는 실질적으로 데이터를 저장하고 있는 물리적인 테이블이
+--        존재해야 되는데 이 테이블은 기본테이블이라고 한다.
+
+
+--[2] 뷰(view) 정의하기
+----  . 뷰를 생성하기 위해서는 create view로 시작함.
+----  . as 다음은 마치 서브쿼리문과 유사함.
+----  .서브쿼리는 우리가 지금까지 사용하였던 select문을
+----    기술하면 됨.
+
+----  만일 30번 부서에 소속된 사원들의 사번과 이름과
+--     부서번호를 자주 검색한다고 가정하면
+
+create view emp_view30
+as
+select empno, ename, deptno from emp_copy
+where deptno = 30;
+
+
+
+-------- . 위와 같이 결과를 출력하기 위해서 매번 select문을
+--           입력하기란 여간 번거로운 일이 아닐 수 없음.
+-------- . 뷰는 이와같이 번거로운 select문을 매번 입력하는
+--            대신 보다 쉽게 원하는 결과를 얻고자 하는 바램에서
+--            출발한 개념.
+
+--[view를 생성할 수 있는 권한 부여]
+conn system/admin1234;
+show user;
+grant create view to scott;
+
+
+
+
+
+
+
+
+--[3] 뷰의 내부 구조와 user_views 데이터 딕셔너리
+SQL>desc user_views;
+SQL>select view_name, text from user_views;
+
+
+--[4] 뷰의 동작원리
+----   1. 사용자가 뷰에 대해서 질의를 하면 user_views에서
+--          뷰에 대한 정의를 조회한다.
+----   2. 기본 테이블에 대한 뷰의 접근 권한을 살핀다.
+----   3. 뷰에 대한 질의를 기본테이블에 대한 질의로 변환.
+----   4. 기본 테이블에 대한 질의를 통해 데이터를 검색.
+----   5. 검색된 결과를 출력한다.
+
+--[5] 뷰와 기본 테이블 관계 파악
+---- 1. 뷰를 통한 데이터 저장이 가능?
+
+
+
+
+
+
+---- 2. insert문에 뷰(emp_view30)를 사용하였지만, 뷰는
+--        쿼리문에 대한 이름일 뿐 새로운 레코드는 기본 테이블
+--        (emp_copy)에 실질적으로 추가되는 것이다.
+
+---- 3. 뷰는 실질적인 데이터를 저장한 기본 테이블을 볼 수
+--        있도록한 투명한 창이다. 즉, 기본 테이블의 모양이 바
+--        뀐 것이고 그 바뀐 내용을 뷰라는 창을 통해서 볼
+--        뿐이다. 뷰에 insert뿐만 아니라, update, delete 모두
+--        사용 할 수 있는데, 이 명령문 역시 뷰의 텍스트에
+--        저장되어 있는 기본 테이블을 변경하는 것이다.
+
+--[6] 뷰를 사용하는 이유
+----  1. 복잡하고 긴 쿼리문을 뷰로 정의하면 접근을 단순화
+--         시킬 수 있다.
+----  2. 보안에 유리하다.
+--          - 사용자마다 특정 객체만 조회할 수 있도록 권한을
+--             부여할 수 있기 때문.
+
+
+
+
+
+-- [7] 뷰의 종류
+----      : 뷰는 뷰를 정의하기 위해서 사용되는 기본 테이블의
+--           수에 따라
+--          - 단순 뷰(simple view)
+--          - 복합 뷰(complex view)로 나눈다.
+
+-------   - 특징
+-------        . 단순 뷰
+--                 - 하나의 테이블로 생성
+--                 - 그룹함수의 사용이 불가능
+--                 - distinct 사용이 불가능
+--                 - insert/update/delete 등 사용 가능
+
+-------        . 복합 뷰
+--                 - 여러 개의 테이블로 생성
+--                 - 그룹함수의 사용이 가능
+--                 - distinct 사용이 가능
+--                 - insert/update/delete 등 사용 불가능
+
+---- [7-1] 단순 뷰에 대한 데이터 조작
+
+
+
+
+
+
+---- [7-2] 단순 뷰의 컬럼에 별칭 부여하기
+
+
+
+
+
+
+
+---- [7-3] 그룹 함수를 사용한 단순 뷰
+--      중요) 뷰를 작성할 때 select 절 다음에 sum()이라는
+--               그룹함수를 사용하면 결과를 뷰의 특정 컬럼처럼
+--               사용하게 됨. 따라서 물리적인 컬럼이 존재하지
+--               않는 가상 컬럼이기 때문에 컬럼명도 상속 받을
+--               수 없음. 뷰를 생성할 때 가상 컬럼을 사용하려면
+--               사용자가 반드시 이름을 따로 설정해야한다.
+
+
+
+
+
+
+
+--      주의) 단순뷰의 경우 insert/update/delete 명령어의
+--              조작이 불가능한 경우
+--              1. 뷰 정의에 포함되지 않은 컬럼 중에 기본 테이블의 컬럼이
+--                  not null 제약 조건이 지정되어 있는 경우 insert문 사용 불가.
+--              2. sal * 12 와 같은 산술 표현식으로 정의된
+--                  가상 컬럼이 뷰에 정의되면 insert/update가
+--                  불가능하다.
+--              3. distinct를 포함한 경우에도 DML 명령 사용 불가-중복 데이터 하나만 가져옴.
+--              3. 그룹함수나 group by 절을 포함한 경우에도 DML 명령 사용 불가.
+
+
+
+
+
+
+
+---- [7-4] 복합 뷰
+
+
+
+
+
+
+
+--[8] 뷰 삭제
+
+
+
+
+--[9] 뷰 생성에 사용되는 다양한 옵션(or replace)
+----   : 존재하지 않는 뷰이면 새로운 뷰를 생성하고, 기존에
+--        존재하는 뷰이면 그 내용을 변경한다.
+
+
+
+
+
+
+--[10] 뷰 생성에 사용되는 다양한 옵션(force/noforce)
+----   force : 기본테이블이 존재하지 않을 때도 뷰를 생성
+--                해야 하는 경우 사용하는 옵션.
+
+----   noforce : 기본테이블이 존재하는 경우만 뷰가 생성(default).
+
+
+
+
+
+
+
+
+--[11] 뷰 생성에 사용되는 다양한 옵션(with check option)
+----  뷰를 생성할 때 조건 제시에 사용된 컬럼 값을 변경
+--     못하도록 하는 기능.
+----  뷰를 설정할 때 조건으로 설정한 컬럼이외의 다른 컬럼의
+--     내용은 변경할 수 있음.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--[12] 뷰 생성에 사용되는 다양한 옵션(with read only)
+----    : 기본 테이블의 어떤 컬럼에 대해서도 뷰를 통한 내용
+--         수정을 불가능하게 만드는 옵션.
+
+
+
+
+
+
+
+
+
+
+
+
+--[13] Top 쿼리
+----  top 쿼리 : 상위 몇 개의 data만을 출력하고 싶을 때
+--         . 사원중에서 입사일이 가장 빠른 사원 5명(top-5)만을
+--           얻어오는 질의문.
+--         . 사원중에서 급여를 가장 많이 받는 사원 7명만을
+--           얻어오는 질의문.
+--         . TOP-N을 구하기 위해 rownum & inline view가 사용.
+
+--[rownum] 컬럼 값 출력
+
+
+
+
+
+
+
+-- [rownum]의 특징
+--     1. 오라클에서만 지원하는 기능.
+--     2. 오름차순 정렬을 하더라도 rownum 컬럼 값은 바뀌지 않는다.
+--     3. 오라클이 내부적으로 부여하는데, insert 문을 이용하여
+--         입력하면 입력한 순서에 따라 1씩 증가되면서 값이 지정.
+--     4. 정렬된 순서대로 rownum 컬럼 값이 매겨지도록 하려면
+--         새로운 테이블이나 뷰로 새롭게 데이터를 저장해야만 한다.
+
+
+
