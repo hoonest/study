@@ -205,7 +205,12 @@ conn system/admin1234;
 show user;
 grant create view to scott;
 
+create view emp_view30
+as
+select empno, ename, deptno from emp_copy
+where deptno = 30;
 
+select * from emp_view30;
 
 
 
@@ -282,7 +287,18 @@ SQL>select view_name, text from user_views;
 
 
 ---- [7-2] 단순 뷰의 컬럼에 별칭 부여하기
+create view emp_view_copy(사원번호, 사원명, 급여, 부서번호)
+as
+select empno, ename, sal, deptno from emp_copy;
 
+grant create view to scott;
+
+create table emp_copy as (select * from emp);
+
+select * from emp_copy
+
+
+select * from emp_view_copy;
 
 
 
@@ -297,7 +313,11 @@ SQL>select view_name, text from user_views;
 --               수 없음. 뷰를 생성할 때 가상 컬럼을 사용하려면
 --               사용자가 반드시 이름을 따로 설정해야한다.
 
-
+create view emp_view_copy
+as
+select deptno, sum(sal) as sum_sal, avg(sal) as avg_sal
+from emp_copy
+group by deptno;
 
 
 
@@ -344,9 +364,16 @@ SQL>select view_name, text from user_views;
 --[10] 뷰 생성에 사용되는 다양한 옵션(force/noforce)
 ----   force : 기본테이블이 존재하지 않을 때도 뷰를 생성
 --                해야 하는 경우 사용하는 옵션.
+create or replace force view employees_view
+as
+select empno, ename, deptno from employees
+where deptno=30;
 
 ----   noforce : 기본테이블이 존재하는 경우만 뷰가 생성(default).
-
+create or replace noforce view employees_view
+as
+select empno, ename, deptno from employees
+where deptno=30;
 
 
 
@@ -397,11 +424,20 @@ SQL>select view_name, text from user_views;
 --           얻어오는 질의문.
 --         . TOP-N을 구하기 위해 rownum & inline view가 사용.
 
+
+
 --[rownum] 컬럼 값 출력
 
+select rownum, a.* from emp a;
+
+--inline view 인라인뷰를 이용한 rownum
+select a.* from (select rownum rn, e.* from emp e order by e.hiredate ) a
+where a.rn >= 2 and a.rn <= 7
 
 
-
+select * from
+(select rownum rnum, a.* from (select rownum rn, e.* from emp e order by e.hiredate ) a )
+where rnum between 3 and 7
 
 
 
@@ -415,3 +451,166 @@ SQL>select view_name, text from user_views;
 
 
 
+create table memos (
+    num  number(4) constraint memos_num_pk primary key,
+    name varchar(20) constraint memos_name_nn not null,
+    postdate date
+);
+
+create sequence memos_seq start with 1 increment by 1;
+
+insert into memos(num, name) values(memos_seq.nextVal, '홍길동');
+insert into memos(num, name) values(memos_seq.nextVal, '이순신');
+insert into memos(num, name) values(memos_seq.nextVal, '이순신');
+insert into memos(num, name) values(memos_seq.nextVal, '이순신');
+insert into memos(num, name) values(memos_seq.nextVal, '이순신');
+
+select * from memos;
+
+--[4] 현재  시퀀스 어디까지 증가되어져 있는지 확인
+-- 주의) 반드시 command 창에서 확인할 것.
+select memos_seq. from dual;
+
+
+--테이블 복사시 테이블구조와 내용만 복사될뿐, 제약조건은 복사되지 않는다
+create table emp01 as select * from emp;
+select * from user_ind_columns where table_name in ('EMP', 'EMP01')
+
+set timing on
+
+create index idx_emp01_ename on emp01(ename);
+
+select * from user_index where table_name in (emp01)
+
+
+
+
+-- DCL 권한 생성/삭제 system계정에 권한이 있다
+c:\> sqlplus system/admin1234
+
+create user thomas identified by tiger;
+conn thomas/tiger
+
+SQL> conn system/admin1234  --수행후 show user로 확인해본다
+SQL> grant create session to thomas;
+SQL> grant create table to thomas;
+
+
+-- [테이블스페이스] 테이블스페이스는 디스크 공간을 소비하는 테이블과 뷰 그리고 그 밖의 다른 데이터 베이스 객체들이 저장
+SQL> conn system/admin1234
+SQL> alter user thomas quota 2m on system;
+SQL> conn thomas/tiger
+SQL> create table emp01(
+     empno number(2),
+     ename varchar2(10),
+     job   varchar2(10),
+     deptno number(2)
+     );
+
+
+
+c:\> sqlplus system/admin1234
+SQL> create user tester1 identified by tiger;
+SQL> grant create session to tester1;
+SQL> grant create table to tester1;
+SQL> alter user tester1 quota 2m on system;
+SQL> conn tester1/tiger
+SQL> grant ctreate session to thomas
+SQL>
+SQL>
+c:\> sqlplus system/admin1234
+SQL> create user tester2 identified by tiger;
+SQL> grant create session to tester2 with admin option;
+SQL> grant create table to tester2 ;
+SQL> alter user tester2 quota 2m on system;
+SQL>
+
+
+
+SQL> grant select on emp to thomas;
+SQL>
+SQL>
+
+--[14] 롤(Role)
+-- 사용자에게 보다 효율적으로 권한을 부여할 수 있도록 여러개의 권한을 묶어 놓은것
+
+--   1) connect Role
+--       . 사용자가 데이터베이스에 접속 가능하도록 하기
+--         위해서 다음과 같이 가장 기본적인 시스템 권한
+--         8가지 묶어 놓은 권한.
+--       . alter session, create cluster, create database link,
+--         create sequence, create session, create synonym,
+--         create table, create view
+
+--   2) resource Role
+--       . 사용자가 객체(테이블, 시퀀스, 뷰)를 생성할 수 있도록
+--         시스템 권한을 묶어 놓은 것.
+--       . create cluster, create procedure, create sequence,
+--         create table, create trigger
+
+--   3) DBA Role
+--       . 사용자들이 소유한 데이터베이스 객체를 관리하고
+--         사용자들이 작성하고 변경하고 제거할 수 있도록 하는
+--         모든 권한을 가짐.
+
+
+c:\> sqlplus system/admin1234
+SQL> create user tester2 identified by tiger;
+SQL> grant connect, resource to tester2;
+SQL> conn tester2/tiger
+SQL> select * from dict where table_name like '%ROLE%';
+
+
+-- 오라클 - 동의어(synonym)
+-- 객체를 조회할때 마다 일일이 객체의 소유자를 지정하는것이 번거로울 경우 동의어를 정의하면
+긴이름대신 간단한 이름으로 접근할 수 있다
+-- 종류
+--   비공개 동의어 : 객체에 대한 접근권한을 부여받은 사용자가 정의한 동의어로 해당 사용자만 사용할 수 있다
+--   공개 동의어 : 권한을 주는 사용자가 정의한 동의어로 누구나 사용할 수 있다, 공개 동의어는 DBA권한을 가진 사용자만이 생성 할 수 있다.
+--               - SYNONYM 앞에 public을 붙여서 정의한다
+--               - ex) dual은 원래 sys가 소유하는 테이블 명이므로 다른 사용자가 dual테이블에 접근하려면 sys.dual로 표현해야 하는 것이 원칙,
+--                     모든 사용자가 sys.을 생략하고 접근한 것이 공개 동의어로 지정되어 있기 때문.
+--[1] 테이블 생성후 객체권한 부여하기
+SQL> conn system/admin1234
+SQL> create table table_systbl(
+    ename varchar2(20)
+    );
+SQL> insert into table_systbl values('이순신');
+SQL> insert into table_systbl values('강감찬');
+
+--scott 사용자(계정)에게 table_systbl이란 테이블에 select 권한 부여
+SQL> grant select on table_systbl to scott;
+SQL> conn scott/tiger
+SQL> select * from table_systbl;
+SQL> select * from system.table_systbl;
+
+--[2] 동의어 생성 및 의미파악하기
+SQL> conn system/admin1234
+SQL> grant create synonym to scott;
+SQL> conn scott/tiger
+SQL> create  synonym systab for system.table_systbl
+SQL> select * from systab;
+
+--[3] 비공개 동의어 생성 및 의미
+--    - 사용자 정의롤을 생성한 후에 사용자 정의 롤에 connection, resource role과 create synonym권한과
+--      scott소유자의 emp테이블과 dept테이블에 대한 select 객체권한을 role에 부여
+SQL> conn system/admin1234
+SQL> create role test_role;
+SQL> grant connect, resource, create synonym to test_role;
+SQL> grant select on scott.dept to test_role;
+SQL> grant select on scott.emp to test_role;
+
+-- 사용자 생성 밀 role 부여
+SQL> create user tester10 identified by tiger;
+SQL> grant test_role to tester10 ;
+SQL> create user tester11 identified by tiger;
+SQL> grant test_role to tester11 ;
+
+SQL> grant select on scott.dept to tester10
+
+SQL> conn tester10/tiger;
+SQL> create synonym dept for scott.dept;
+SQL> select * from dept;
+
+SQL> conn tester11/tiger;
+SQL> select * from dept;
