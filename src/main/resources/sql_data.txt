@@ -614,3 +614,5 @@ SQL> select * from dept;
 
 SQL> conn tester11/tiger;
 SQL> select * from dept;
+
+--[4] 공개 동의어 정의하기
